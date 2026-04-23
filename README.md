@@ -1,16 +1,26 @@
 # unspsc-python
 
-A clean Python library for UNSPSC code lookup, hierarchy traversal, and fuzzy matching.
-
-**UNSPSC v26.0801 · 149,849 commodities · 58 segments · zero dependencies**
+> *UNSPSC v26.0801 · 149,849 commodities · lookup, hierarchy traversal, fuzzy matching · zero dependencies*
 
 ---
 
-## Why this exists
+## The Friday Afternoon Problem
 
-Every procurement developer eventually needs to map a product description to a UNSPSC code. The official codeset is a spreadsheet. The public tooling is a broken GitHub repo from 2019.
+Sarah is a developer at a mid-sized manufacturing company. Her manager just asked her to build a tool that automatically tags every purchase order line with a spend category.
 
-This library gives you a proper API — lookup by code, traverse the 4-level hierarchy, fuzzy-match a description to a commodity — in a few lines of Python.
+Simple enough, she thinks.
+
+She opens Google. Searches **"UNSPSC Python library"**.
+
+Nothing. A broken GitHub repo from 2019 with 3 stars. A CSV someone uploaded to Kaggle. A StackOverflow answer with a dead link.
+
+She spends two hours just trying to understand the UNSPSC hierarchy. Segment → Family → Class → Commodity. Four levels. 55,000 codes. No clean API. No lookup function. No fuzzy match.
+
+She gives up and hard-codes 40 categories manually.
+
+It breaks the first week when a PO comes in for **"cutting fluid"** and the system doesn't know where to put it.
+
+Then someone points her to `unspsc-python`.
 
 ```python
 from unspsc import match
@@ -19,6 +29,8 @@ match("cutting fluid")
 # → [MatchResult(code=12191507, title='Cutting oils', score=91.2), ...]
 ```
 
+Twenty minutes. Done. She goes home on time.
+
 ---
 
 ## Installation
@@ -26,45 +38,55 @@ match("cutting fluid")
 ```bash
 pip install unspsc-python
 
-# For fuzzy matching (recommended):
+# With fuzzy matching (recommended — powers match()):
 pip install "unspsc-python[fuzzy]"
 ```
 
 ---
 
-## Quick start
+## What you can do
 
-### Lookup a code at any level
+### Look up any UNSPSC code
 
 ```python
 from unspsc import lookup
 
-lookup(10000000)  # Segment
-# → Segment(code=10000000, title='Live Plant and Animal Material...', definition='...')
-
-lookup(12191507)  # Commodity
+lookup(12191507)
 # → Commodity(code=12191507, title='Cutting oils', definition='...', class_code=12191500)
+
+lookup(12000000)
+# → Segment(code=12000000, title='Chemicals including Bio Chemicals and Gas Materials', ...)
 ```
 
-### Traverse the full 4-level hierarchy
+Works at all four levels — segment, family, class, or commodity.
+
+---
+
+### Traverse the full hierarchy
+
+Sarah's manager then asks: *"Can you also show me where each category sits in the tree?"*
 
 ```python
 from unspsc import hierarchy
 
 h = hierarchy(12191507)
 print(h)
-# → 12000000 Chemicals including Bio Chemicals and Gas Materials →
-#   12190000 Lubricants and oils and greases and anti corrosives →
-#   12191500 Cutting and lubricating and cooling fluids →
-#   12191507 Cutting oils
+# 12000000 Chemicals including Bio Chemicals and Gas Materials →
+# 12190000 Lubricants and oils and greases and anti corrosives →
+# 12191500 Cutting and lubricating and cooling fluids →
+# 12191507 Cutting oils
 
-h.segment.title   # "Chemicals including Bio Chemicals and Gas Materials"
-h.family.title    # "Lubricants and oils and greases and anti corrosives"
-h.cls.title       # "Cutting and lubricating and cooling fluids"
-h.commodity.title # "Cutting oils"
+h.segment.title    # "Chemicals including Bio Chemicals and Gas Materials"
+h.family.title     # "Lubricants and oils and greases and anti corrosives"
+h.cls.title        # "Cutting and lubricating and cooling fluids"
+h.commodity.title  # "Cutting oils"
 ```
 
-### Fuzzy-match a description
+---
+
+### Fuzzy-match a description to a commodity
+
+This is the piece that saves Sarah's Friday afternoon. She feeds raw PO line descriptions directly — no pre-cleaning required.
 
 ```python
 from unspsc import match
@@ -74,7 +96,9 @@ for r in results:
     print(f"{r.code}  {r.title:<50}  score={r.score}")
 ```
 
-Requires `rapidfuzz` (`pip install "unspsc-python[fuzzy]"`). Falls back to full-text search if not installed.
+Powered by [rapidfuzz](https://github.com/rapidfuzz/RapidFuzz). Falls back to SQLite full-text search if not installed.
+
+---
 
 ### Full-text search
 
@@ -88,13 +112,13 @@ for r in results:
 
 ---
 
-## CLI
+## CLI — for the command line and shell scripts
 
 ```bash
-# Lookup any code
+# Look up a code
 unspsc lookup 12191507
 
-# Show full hierarchy
+# Show full 4-level hierarchy
 unspsc hierarchy 12191507
 
 # Fuzzy-match a description
@@ -104,32 +128,52 @@ unspsc match "cutting fluid" --limit 5
 unspsc search "lubricant" --limit 10
 ```
 
-All commands output JSON.
+All commands output clean JSON — pipe them into anything.
 
 ---
 
-## UNSPSC hierarchy
+## The UNSPSC hierarchy
 
-UNSPSC organises all products and services into four levels:
+Every product and service in the world fits into four levels:
 
-| Level | Example code | Example title |
-|-------|-------------|---------------|
-| Segment | `12000000` | Chemicals including Bio Chemicals |
-| Family | `12190000` | Lubricants and oils and greases |
-| Class | `12191500` | Cutting and lubricating fluids |
-| Commodity | `12191507` | Cutting oils |
+| Level | Digits | Example code | Example title |
+|-------|--------|-------------|---------------|
+| Segment | 1–2 | `12000000` | Chemicals including Bio Chemicals |
+| Family | 3–4 | `12190000` | Lubricants and oils and greases |
+| Class | 5–6 | `12191500` | Cutting and lubricating fluids |
+| Commodity | 7–8 | `12191507` | Cutting oils |
+
+---
+
+## The researcher who couldn't evaluate anything
+
+James is writing his PhD on LLMs for enterprise document understanding. He needs to benchmark GPT-4, Claude, and Llama on procurement tasks.
+
+Does the model correctly interpret a purchase order? Can it spot a pricing anomaly? Does it know what a blanket order is?
+
+He has no dataset. None exists publicly. He has to build one himself — which means needing domain knowledge he doesn't have.
+
+He posts on Reddit: *"Does anyone have a procurement Q&A dataset for LLM evaluation?"*
+
+Nothing.
+
+He ends up writing 200 generic questions that don't actually test real procurement understanding. His paper is weaker for it.
+
+If James had found this library first, he would have had the full UNSPSC taxonomy at his fingertips — 149,849 commodities, definitions, hierarchy — to build his dataset from.
+
+The companion project **[procurement-benchmarks](https://github.com/kundanshar-cell/procurement-benchmarks)** is being built for James. 500 real-world Q&A pairs for benchmarking LLMs on procurement domain accuracy.
 
 ---
 
 ## Data source
 
-Codeset: **UNSPSC UNv26.0801** (August 2023)  
+**UNSPSC UNv26.0801** — released August 2023  
 Publisher: [United Nations Development Programme (UNDP)](https://www.undp.org/unspsc)  
 Free download: https://www.undp.org/unspsc  
-UNSPSC® is a registered trademark of UNDP.
 
-The bundled database (`data/unspsc.db.gz`) is built from the official UNDP codeset.  
-To rebuild from a newer version:
+> UNSPSC® is a registered trademark of UNDP.
+
+The bundled database (`data/unspsc.db.gz`, 11 MB compressed) is built from the official UNDP codeset. To rebuild from a newer version:
 
 ```bash
 python scripts/build_db.py path/to/unspsc-english-vXX.xlsx
@@ -139,9 +183,9 @@ python scripts/build_db.py path/to/unspsc-english-vXX.xlsx
 
 ## Roadmap
 
-- [ ] Oracle Fusion + Coupa code mapping
-- [ ] `hierarchy()` for segment/family/class codes (not just commodity)
-- [ ] Batch match via CSV input
+- [ ] `hierarchy()` support for segment / family / class codes (not just commodity)
+- [ ] Batch match from CSV — tag an entire PO extract in one command
+- [ ] Oracle Fusion and Coupa code mapping
 - [ ] Confidence threshold filtering in `match()`
 - [ ] Parquet export of the full codeset
 
@@ -168,4 +212,5 @@ UNSPSC® is a registered trademark of UNDP. The codeset is published by UNDP und
 
 ---
 
-*Built by [Kundan Sharma](https://github.com/kundanshar-cell) — IT & Digital Solution Architect with 15 years in enterprise procurement and ERP.*
+*Built by [Kundan Sharma](https://github.com/kundanshar-cell) — IT & Digital Solution Architect with 15 years in enterprise procurement and ERP.*  
+*Because Sarah shouldn't have to hard-code 40 categories on a Friday afternoon.*
