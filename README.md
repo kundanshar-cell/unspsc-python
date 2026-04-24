@@ -209,8 +209,3 @@ pytest
 MIT — see [LICENSE](LICENSE)
 
 UNSPSC® is a registered trademark of UNDP. The codeset is published by UNDP under free-access terms at https://www.undp.org/unspsc.
-
----
-
-*Built by [Kundan Sharma](https://github.com/kundanshar-cell) — IT & Digital Solution Architect with 15 years in enterprise procurement and ERP.*  
-*Because Sarah shouldn't have to hard-code 40 categories on a Friday afternoon.*
